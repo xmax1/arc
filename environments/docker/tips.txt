@@ -1,0 +1,8 @@
+Ensure the following is installed:
+- Docker 
+- kubectl 
+- minikube
+
+WandB:
+- does not require any additional ports to be exposed for running in a Docker container. It is a tool for visualizing and tracking machine learning experiments, and its communication with the WandB servers is typically done through the HTTP and HTTPS protocols.
+- Once you activate the myenv environment using the conda activate myenv command, you should be able to use WandB in your Python code without any issues.

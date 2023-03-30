@@ -1,0 +1,19 @@
+version: '3.9'
+
+services:
+  ai-lab:
+    image: This Is Broken For Now
+    restart: always
+    volumes:
+      - ./jupyter_mount:/workspace
+      # - ./jupyter_config:/root/.jupyter/
+      - ./wandb_mount/wandb/config:/root/.config/wandb
+    ports:
+      - '8888:8888'
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
