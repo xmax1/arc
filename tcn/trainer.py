@@ -6,7 +6,7 @@ import numpy as np
 #from skimage.measure import compare_ssim
 #from skimage.metrics import _structural_similarity
 from skimage.metrics import structural_similarity
-from utils import preprocess, metrics
+from tcn.utils import preprocess, metrics
 #from skimage.metrics.structural_similarity import compare_ssim
 
 

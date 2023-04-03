@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.nn.modules.sparse import Embedding
-from TCTN_modules.TCTN_module import *
+from ..TCTN_modules.TCTN_module import *
 
 import argparse
 

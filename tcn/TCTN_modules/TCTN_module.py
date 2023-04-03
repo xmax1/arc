@@ -1,7 +1,7 @@
 __author__ = 'ziao'
 import torch
 import torch.nn as nn
-from TCTN_modules.TCTN_module_utils import *
+from tcn.TCTN_modules.TCTN_module_utils import *
 
 ####################################################################################
 ######################### definition for feature embedding #########################

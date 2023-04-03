@@ -5,7 +5,7 @@ from typing import List, Tuple
 import os
 import torch
 import math
-from methods import run_cmds
+from .methods import run_cmds
 
 
 class UserConfig(BaseModel):
@@ -207,7 +207,7 @@ class DistBase(BaseModel):
 
 
 class Resource(BaseModel):
-    n_gpu: int = 0
+    # n_gpu: int = 0
     n_node: int = 1
     n_thread_per_process: int = 1
 
@@ -317,9 +317,9 @@ class Niflheim(BaseModel):
 
 
 class slurm_c(BaseModel):
-    export: str = 'ALL'
-    cpus_per_gpu: int = 8  # 1 task 1 gpu 8 cpus per task
-    partition: str = 'sm3090'
+    # export: str = 'ALL'
+    # cpus_per_gpu: int = 8  # 1 task 1 gpu 8 cpus per task
+    # partition: str = 'sm3090'
     time: str = '0-00:10:00'  # D-HH:MM:SS
 
     @property
@@ -403,7 +403,6 @@ all_config = dict(
     Resource=Resource,
     Niflheim=Niflheim,
     SlurmC=SlurmC,
-    slurm_c=slurm_c,
     Config=Config
 )
 # Replace train_path and valid_path with actual paths before initializing the config
