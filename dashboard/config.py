@@ -1,15 +1,19 @@
+from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 import os
 import torch
-from pydantic import BaseModel
+import math
+from methods import run_cmds
+
 
 class UserConfig(BaseModel):
     name: str
     secret: str
 
+
 class Pyfig(BaseModel):
-    user: UserConfig
     project: str = None
     env: str = None
     run_name: Path = None
@@ -62,8 +66,10 @@ class Pyfig(BaseModel):
 
     ignore_f: List[str] = ['commit', 'pull', 'backward']
     ignore_p: List[str] = ['parameters', 'scf', 'tag', 'mode_c']
-    ignore: List[str] = ['ignore', 'ignore_f', 'ignore_c'] + ignore_f + ignore_p
-    ignore += ['d', 'cmd', 'sub_ins', 'd_flat', 'repo', 'name', 'base_d', 'c_init', 'p']
+    ignore: List[str] = ['ignore', 'ignore_f',
+                         'ignore_c'] + ignore_f + ignore_p
+    ignore += ['d', 'cmd', 'sub_ins', 'd_flat',
+               'repo', 'name', 'base_d', 'c_init', 'p']
     base_d: dict = None
     c_init: dict = None
     run_debug_c: bool = False
@@ -91,6 +97,7 @@ class Pyfig(BaseModel):
         if val is not None:
             self.dtype_str = str(val).split('.')[-1]
 
+
 class Model(BaseModel):
     compile_ts: bool = False
     compile_func: bool = False
@@ -114,7 +121,8 @@ class Model(BaseModel):
 
 
 class Opt(BaseModel):
-    available_opt: List[str] = ['AdaHessian', 'RAdam', 'Apollo', 'AdaBelief', 'LBFGS', 'Adam', 'AdamW']
+    available_opt: List[str] = ['AdaHessian', 'RAdam',
+                                'Apollo', 'AdaBelief', 'LBFGS', 'Adam', 'AdamW']
     opt_name: str = 'AdamW'
     lr: float = 1e-3
     init_lr: float = 1e-3
@@ -134,30 +142,39 @@ class Scheduler(BaseModel):
     sch_verbose: bool = False
 
 
+class ParamConfig(BaseModel):
+    opt_name: str = ['AdaHessian', 'RAdam']
+    hessian_power: float = [0.5, 0.75, 1.]
+    weight_decay: float = (0.0001, 1.)
+    lr: float = (0.0001, 1.)
+
+
 class Sweep(BaseModel):
     sweep_name: str = 'study'
     n_trials: int = 20
-    parameters: Dict[str, Any] = {
-        'opt_name': {
-            'values': ['AdaHessian', 'RAdam'],
-            'dtype': str
-        },
-        'hessian_power': {
-            'values': [0.5, 0.75, 1.],
-            'dtype': float,
-            'condition': ['AdaHessian']
-        },
-        'weight_decay': {
-            'domain': (0.0001, 1.),
-            'dtype': float,
-            'condition': ['AdaHessian']
-        },
-        'lr': {
-            'domain': (0.0001, 1.),
-            'log': True,
-            'dtype': float
-        },
-    }
+    # parameters: Dict[str, ParamConfig]
+
+    # parameters: Dict[str, Any] = {
+    #     'opt_name': {
+    #         'values': ['AdaHessian', 'RAdam'],
+    #         'dtype': str
+    #     },
+    #     'hessian_power': {
+    #         'values': [0.5, 0.75, 1.],
+    #         'dtype': float,
+    #         'condition': ['AdaHessian']
+    #     },
+    #     'weight_decay': {
+    #         'domain': (0.0001, 1.),
+    #         'dtype': float,
+    #         'condition': ['AdaHessian']
+    #     },
+    #     'lr': {
+    #         'domain': (0.0001, 1.),
+    #         'log': True,
+    #         'dtype': float
+    #     },
+    # }
 
 
 class DistBase(BaseModel):
@@ -180,14 +197,13 @@ class DistBase(BaseModel):
     def head(self) -> bool:
         return self.rank == 0
 
-    gpu_id: 		str		= property(lambda _: ''.join(run_cmds(_._gpu_id_cmd, silent=True)).split('.')[0])
-    dist_id: 		str 	= property(lambda _: _.gpu_id + '-' + hostname.split('.')[0])
+    gpu_id: 		str = property(lambda _: ''.join(
+        run_cmds(_._gpu_id_cmd, silent=True)).split('.')[0])
+    dist_id: 		str = property(
+        lambda _: _.gpu_id + '-' + hostname.split('.')[0])
     pid: 			int = property(lambda _: _.rank)
-  
-  	_gpu_id_cmd:	str		= 'nvidia-smi --query-gpu=pci.bus_id --format=csv,noheader'
 
-
-from pydantic import BaseModel, validator
+    _gpu_id_cmd:	str = 'nvidia-smi --query-gpu=pci.bus_id --format=csv,noheader'
 
 
 class Resource(BaseModel):
@@ -206,7 +222,7 @@ class Resource(BaseModel):
 
 
 class Niflheim(Resource):
-    n_gpu: int = 1
+    # n_gpu: int = 1
 
     @validator("n_node", pre=True, always=True)
     def calculate_n_node(cls, v, values):
@@ -219,61 +235,61 @@ class Niflheim(Resource):
     architecture: str = "cuda"
     nifl_gpu_per_node: int = 10
 
-    job_id: str = os.environ.get("SLURM_JOBID", "No SLURM_JOBID available.")  # slurm only
+    job_id: str = os.environ.get(
+        "SLURM_JOBID", "No SLURM_JOBID available.")  # slurm only
 
     _pci_id_cmd: str = "nvidia-smi --query-gpu=pci.bus_id --format=csv,noheader"
-    pci_id: str = "".join(run_cmds(self._pci_id_cmd, silent=True))
+    pci_id: str = "".join(run_cmds(_pci_id_cmd, silent=True))
 
     n_device_env: str = "CUDA_VISIBLE_DEVICES"
-    n_device: int = len(os.environ.get(self.n_device_env, "").replace(",", ""))
+    n_device: int = len(os.environ.get(n_device_env, "").replace(",", ""))
 
-    class SlurmC(BaseModel):
-        export: str = "ALL"
-        cpus_per_gpu: int = 8  # 1 task 1 gpu 8 cpus per task
-        partition: str = "sm3090"
-        time: str = "0-00:10:00"  # D-HH:MM:SS
-        nodes: str = ""
-        gres: str = ""
-        ntasks: int = 0
-        job_name: str = ""
-        output: str = ""
-        error: str = ""
 
-        @validator("nodes", pre=True, always=True)
-        def calculate_nodes(cls, v, values):
-            return str(values.get("p", {}).get("n_node", 1))
+class SlurmC(BaseModel):
+    export: str = "ALL"
+    cpus_per_gpu: int = 8  # 1 task 1 gpu 8 cpus per task
+    partition: str = "sm3090"
+    time: str = "0-00:10:00"  # D-HH:MM:SS
+    nodes: str = ""
+    gres: str = ""
+    ntasks: int = 0
+    job_name: str = ""
+    output: str = ""
+    error: str = ""
 
-        @validator("gres", pre=True, always=True)
-        def calculate_gres(cls, v, values):
-            n_gpu = values.get("p", {}).get("n_gpu", 1)
-            return f"gpu:RTX3090:{min(10, n_gpu)}"
+    @validator("nodes", pre=True, always=True)
+    def calculate_nodes(cls, v, values):
+        return str(values.get("p", {}).get("n_node", 1))
 
-        @validator("ntasks", pre=True, always=True)
-        def calculate_ntasks(cls, v, values):
-            nodes = int(values.get("nodes", 1))
-            n_gpu = values.get("p", {}).get("n_gpu", 1)
-            return n_gpu if nodes == 1 else nodes * 80
+    @validator("gres", pre=True, always=True)
+    def calculate_gres(cls, v, values):
+        n_gpu = values.get("p", {}).get("n_gpu", 1)
+        return f"gpu:RTX3090:{min(10, n_gpu)}"
 
-        @validator("job_name", pre=True, always=True)
-        def calculate_job_name(cls, v, values):
-            return values.get("p", {}).get("exp_name", "")
+    @validator("ntasks", pre=True, always=True)
+    def calculate_ntasks(cls, v, values):
+        nodes = int(values.get("nodes", 1))
+        n_gpu = values.get("p", {}).get("n_gpu", 1)
+        return n_gpu if nodes == 1 else nodes * 80
 
-        @property
-        def output(self):
-            return self.p.p.paths.cluster_dir / 'o-%j.out'
-    
-        @property
-        def error(self):
-            return self.p.p.paths.cluster_dir / 'e-%j.err'
+    @validator("job_name", pre=True, always=True)
+    def calculate_job_name(cls, v, values):
+        return values.get("p", {}).get("exp_name", "")
 
-from typing import Optional
-from pydantic import BaseModel
+    @property
+    def output(self):
+        return self.p.p.paths.cluster_dir / 'o-%j.out'
+
+    @property
+    def error(self):
+        return self.p.p.paths.cluster_dir / 'e-%j.err'
+
 
 class Niflheim(BaseModel):
     n_gpu: int = 1
     architecture: str = 'cuda'
     nifl_gpu_per_node: int = 10
-    
+
     @property
     def n_node(self) -> int:
         return int(math.ceil(self.n_gpu / self.nifl_gpu_per_node))
@@ -284,7 +300,8 @@ class Niflheim(BaseModel):
 
     @property
     def job_id(self) -> str:
-        return os.environ.get('SLURM_JOBID', 'No SLURM_JOBID available.')  # slurm only
+        # slurm only
+        return os.environ.get('SLURM_JOBID', 'No SLURM_JOBID available.')
 
     _pci_id_cmd: str = 'nvidia-smi --query-gpu=pci.bus_id --format=csv,noheader'
 
@@ -298,34 +315,97 @@ class Niflheim(BaseModel):
     def n_device(self) -> int:
         return len(os.environ.get(self.n_device_env, '').replace(',', ''))
 
-    class slurm_c(BaseModel):
-        export: str = 'ALL'
-        cpus_per_gpu: int = 8  # 1 task 1 gpu 8 cpus per task
-        partition: str = 'sm3090'
-        time: str = '0-00:10:00'  # D-HH:MM:SS
-    
-        @property
-        def nodes(self) -> str:
-            return str(self.p.n_node)  # (MIN-MAX)
-    
-        @property
-        def gres(self) -> str:
-            return 'gpu:RTX3090:' + str(min(10, self.p.n_gpu))
-    
-        @property
-        def ntasks(self) -> int:
-            return self.p.n_gpu if int(self.nodes) == 1 else int(self.nodes) * 80
-    
-        @property
-        def job_name(self) -> str:
-            return self.p.p.exp_name
-  
-      @property
-      def output(self) -> str:
-          return str(self.p.p.paths.cluster_dir/'o-%j.out')
-  
-      @property
-      def error(self) -> str:
-          return str(self.p.p.paths.cluster_dir/'e-%j.err')
+
+class slurm_c(BaseModel):
+    export: str = 'ALL'
+    cpus_per_gpu: int = 8  # 1 task 1 gpu 8 cpus per task
+    partition: str = 'sm3090'
+    time: str = '0-00:10:00'  # D-HH:MM:SS
+
+    @property
+    def nodes(self) -> str:
+        return str(self.p.n_node)  # (MIN-MAX)
+
+    @property
+    def gres(self) -> str:
+        return 'gpu:RTX3090:' + str(min(10, self.p.n_gpu))
+
+    @property
+    def ntasks(self) -> int:
+        return self.p.n_gpu if int(self.nodes) == 1 else int(self.nodes) * 80
+
+    @property
+    def job_name(self) -> str:
+        return self.p.p.exp_name
+
+    @property
+    def output(self) -> str:
+        return str(self.p.p.paths.cluster_dir/'o-%j.out')
+
+    @property
+    def error(self) -> str:
+        return str(self.p.p.paths.cluster_dir/'e-%j.err')
 
 
+class Config(BaseModel):
+    dataset_name: str = 'mnist'
+    train_data_paths: str
+    valid_data_paths: str
+    save_dir: str = 'moving-mnist/checkpoints/mnist_tctn'
+    gen_frm_dir: str = 'moving-mnist/results/mnist_tctn'
+    loss_dir: str = 'moving-mnist/loss/mnist_tctn'
+    print_path: str = 'moving-mnist/loss/mnist_tctn'
+    input_length: int = 10
+    total_length: int = 20
+    test_input_length: int = 10
+    test_total_length: int = 20
+    img_width: int = 64
+    img_channel: int = 1
+    reverse_input: int = 1
+    lr: float = 1e-4
+    n_steps: int = 50000
+    T_0: int = 5000
+    T_mult: int = 2
+    # gamma: float = 0.95
+    batch_size: int = 8
+    max_iterations: int = 37500
+    display_interval: int = 100
+    test_interval: int = 1250
+    snapshot_interval: int = 2500
+    loss_interval: int = 10000
+    num_save_samples: int = 10
+    model_name: str = 'TCTN'
+    pretrained_model: str = ''
+    patch_size: int = 4
+    model_depth: int = 128
+    de_layers: int = 6
+    n_layers: int = 0
+    n_heads: int = 1
+    dec_frames: int = 19
+    w_res: bool = True
+    w_pos: bool = True
+    pos_kind: str = 'sine'
+    model_type: int = 1
+    w_pffn: int = 0
+    accumulation_steps: int = 1
+    de_train_type: int = 0
+    test: int = 0
+
+
+all_config = dict(
+    UserConfig=UserConfig,
+    Pyfig=Pyfig,
+    Model=Model,
+    Opt=Opt,
+    Scheduler=Scheduler,
+    Sweep=Sweep,
+    DistBase=DistBase,
+    Resource=Resource,
+    Niflheim=Niflheim,
+    SlurmC=SlurmC,
+    slurm_c=slurm_c,
+    Config=Config
+)
+# Replace train_path and valid_path with actual paths before initializing the config
+train_path = 'path/to/train_data'
+valid_path = 'path/to/valid_data'
